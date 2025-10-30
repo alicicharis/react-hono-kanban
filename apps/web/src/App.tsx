@@ -1,10 +1,15 @@
 import Board from './components/board';
+import '@mantine/core/styles.css';
+
+import { MantineProvider } from '@mantine/core';
 
 function App() {
   return (
-    <main className="p-4">
-      <Board />
-    </main>
+    <MantineProvider>
+      <main>
+        <Board />
+      </main>
+    </MantineProvider>
   );
 }
 
