@@ -12,6 +12,8 @@ import BoardColumn from './board-column';
 import BoardItem from './board-item';
 import CreateItemForm from './create-item-form';
 import type { BoardItem as BoardItemType } from '../types';
+import { Button } from '@mantine/core';
+import { api } from '../lib/api';
 
 type Column = {
   id: string;
@@ -25,18 +27,6 @@ const COLUMNS: Column[] = [
     id: 'to-do',
     title: 'To do',
     items: [
-      {
-        id: 'get-coffee',
-        title: 'Get coffee',
-        priority: 'low',
-        columnId: 'to-do',
-      },
-      {
-        id: 'get-coffee',
-        title: 'Get coffee',
-        priority: 'low',
-        columnId: 'to-do',
-      },
       {
         id: 'get-coffee',
         title: 'Get coffee',
@@ -142,8 +132,22 @@ const Board = () => {
     });
   };
 
+  const fetchHandler = async () => {
+    // const response = await fetch('/api/board-items');
+    // const data = await response.json();
+    // console.log('Data: ', data);
+    const response = await api['board-items'].$get();
+
+    const data = await response.json();
+
+    console.log('Data: ', data);
+  };
+
   return (
     <div className="min-h-[90vh] rounded-xl bg-linear-to-b from-slate-800 to-slate-900 p-6 shadow-lg grid grid-cols-1 md:grid-cols-3 gap-6">
+      <Button onClick={fetchHandler} variant="outline" radius="md">
+        Fetch
+      </Button>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

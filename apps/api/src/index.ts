@@ -1,18 +1,17 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { boardItemsController } from './controllers/board-items.controller';
+import { boardsController } from './controllers/boards.controller';
 
-const app = new Hono();
+const app = new Hono()
+  .use('*', cors())
+  .get('/', (c) => c.text('Hello Hono!'))
+  .get('/health', (c) => c.json({ status: 'ok' }))
+  .route('/board-items', boardItemsController)
+  .route('/boards', boardsController);
 
-app.use('*', cors());
-
-app.get('/', (c) => {
-  return c.text('Hello Hono!');
-});
-
-app.get('/api/data', (c) => {
-  return c.json({ message: 'Hello World' });
-});
+export type AppType = typeof app;
 
 serve(
   {
