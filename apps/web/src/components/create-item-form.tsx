@@ -1,32 +1,28 @@
-import { Select, TextInput } from '@mantine/core';
+import { Button, Modal, Select, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { Modal, Button } from '@mantine/core';
 import { useState } from 'react';
-import { generateRandomId } from '../utils';
-import type { BoardItem, Priority } from '../types';
+import { useCreateBoardItem } from '../hooks/useBoardItems';
+import type { Priority } from '../types';
 
 type Props = {
-  columnId: string;
-  createItemHandler: (data: BoardItem) => void;
+  boardId: number;
+  columnId: number;
 };
 
-export default function CreateItemForm({ columnId, createItemHandler }: Props) {
-  const [opened, { open, close }] = useDisclosure(false);
+export default function CreateItemForm({ boardId, columnId }: Props) {
+  const { mutate: createItem, isPending } = useCreateBoardItem();
 
   const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<Priority>('low');
+  const [priority, setPriority] = useState<Priority | undefined>();
+
+  const [opened, { open, close }] = useDisclosure(false);
 
   const submitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!title || !priority) return;
 
-    createItemHandler({
-      id: generateRandomId(),
-      title,
-      priority,
-      columnId,
-    });
+    createItem({ boardId, title, priority, columnId });
     close();
   };
 
@@ -50,7 +46,7 @@ export default function CreateItemForm({ columnId, createItemHandler }: Props) {
               type="submit"
               variant="filled"
               radius="md"
-              disabled={!title || !priority}
+              disabled={!title || !priority || isPending}
             >
               Save item
             </Button>

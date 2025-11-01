@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 
 type BoardColumnProps = {
-  id: string;
+  id: number;
   title: string;
   children: React.ReactNode;
 };

@@ -7,63 +7,23 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { Button, Modal, TextInput } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
+import { useParams } from 'react-router';
+import { useCreateBoardColumn } from '../hooks/useBoardColumns';
+import { useBoard } from '../hooks/useBoards';
 import BoardColumn from './board-column';
 import BoardItem from './board-item';
 import CreateItemForm from './create-item-form';
-import type { BoardItem as BoardItemType } from '../types';
-import { Button } from '@mantine/core';
-import { api } from '../lib/api';
-
-type Column = {
-  id: string;
-  title: string;
-  items: BoardItemType[];
-};
-
-// dummy data
-const COLUMNS: Column[] = [
-  {
-    id: 'to-do',
-    title: 'To do',
-    items: [
-      {
-        id: 'get-coffee',
-        title: 'Get coffee',
-        priority: 'low',
-        columnId: 'to-do',
-      },
-    ],
-  },
-  {
-    id: 'in-progress',
-    title: 'In progress',
-    items: [
-      {
-        id: 'write-blog',
-        title: 'Write blog',
-        priority: 'medium',
-        columnId: 'in-progress',
-      },
-    ],
-  },
-  {
-    id: 'done',
-    title: 'Done',
-    items: [
-      {
-        id: 'finish-project',
-        title: 'Finish project',
-        priority: 'high' as const,
-        columnId: 'done',
-      },
-    ],
-  },
-];
 
 const Board = () => {
-  const [columns, setColumns] = useState<Column[]>(COLUMNS);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const { id } = useParams();
+
+  const boardId = Number(id);
+  const { data: board, isLoading, error, isFetching } = useBoard(boardId);
+
+  const [activeId, setActiveId] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -73,8 +33,10 @@ const Board = () => {
     })
   );
 
+  const [opened, { open, close }] = useDisclosure(false);
+
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
+    setActiveId(event.active.id as number);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -83,107 +45,159 @@ const Board = () => {
 
     if (!over) return;
 
-    const draggedItemId = String(active.id);
-    const destinationColumnId = String(over.id);
+    const draggedItemId = active.id as number;
+    const destinationColumnId = over.id as number;
 
-    const sourceIndex = columns.findIndex((col) =>
+    const sourceColumnIndex = board?.columns.findIndex((col) =>
       col.items.some((it) => it.id === draggedItemId)
     );
-    const destIndex = columns.findIndex(
+    const destinationColumnIndex = board?.columns.findIndex(
       (col) => col.id === destinationColumnId
     );
 
-    if (sourceIndex === -1 || destIndex === -1) return;
-    if (sourceIndex === destIndex) return;
+    if (sourceColumnIndex === -1 || destinationColumnIndex === -1) return;
+    if (sourceColumnIndex === destinationColumnIndex) return;
 
-    setColumns((prev) => {
-      const sourceColumn = prev[sourceIndex];
-      const destColumn = prev[destIndex];
-
-      const movedItem = sourceColumn.items.find(
-        (it) => it.id === draggedItemId
-      );
-      if (!movedItem) return prev;
-
-      const updatedSourceItems = sourceColumn.items.filter(
-        (it) => it.id !== draggedItemId
-      );
-      const updatedDestItems = [...destColumn.items, movedItem];
-
-      return prev.map((col, idx) => {
-        if (idx === sourceIndex) return { ...col, items: updatedSourceItems };
-        if (idx === destIndex) return { ...col, items: updatedDestItems };
-        return col;
-      });
-    });
+    // to do: Implement mutation to update item's columnId on the backend
   };
 
   const activeItem = activeId
-    ? columns.flatMap((c) => c.items).find((it) => it.id === activeId) || null
+    ? board?.columns.flatMap((c) => c.items).find((it) => it.id === activeId) ||
+      null
     : null;
 
-  const createItemHandler = (data: BoardItemType) => {
-    setColumns((prev) => {
-      return prev.map((col) => {
-        if (col.id === data.columnId)
-          return { ...col, items: [...col.items, data] };
-        return col;
-      });
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-linear-to-b from-slate-800 to-slate-900 p-6 flex items-center justify-center">
+        <div className="text-slate-100">Loading board...</div>
+      </div>
+    );
+  }
 
-  const fetchHandler = async () => {
-    // const response = await fetch('/api/board-items');
-    // const data = await response.json();
-    // console.log('Data: ', data);
-    const response = await api['board-items'].$get();
+  if (error) {
+    return (
+      <div className="min-h-screen bg-linear-to-b from-slate-800 to-slate-900 p-6 flex items-center justify-center">
+        <div className="text-red-400">
+          Error loading board:{' '}
+          {error instanceof Error ? error.message : 'Unknown error'}
+        </div>
+      </div>
+    );
+  }
 
-    const data = await response.json();
+  if (board?.columns.length === 0) {
+    return (
+      <div className="min-h-screen bg-linear-to-b from-slate-800 to-slate-900 p-6 flex items-center justify-center">
+        <div className="text-slate-100 flex flex-col items-center justify-center gap-4">
+          <p>No columns found for this board</p>
+          <Button variant="outline" radius="md" onClick={open}>
+            + New column
+          </Button>
+          <CreateColumnForm boardId={boardId} opened={opened} close={close} />
+        </div>
+      </div>
+    );
+  }
 
-    console.log('Data: ', data);
-  };
+  if (!id || isNaN(boardId) || (!board && !isFetching) || !board) {
+    return <BoardNotFound />;
+  }
 
   return (
-    <div className="min-h-[90vh] rounded-xl bg-linear-to-b from-slate-800 to-slate-900 p-6 shadow-lg grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Button onClick={fetchHandler} variant="outline" radius="md">
-        Fetch
-      </Button>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        {columns.map((column) => (
-          <BoardColumn key={column.id} id={column.id} title={column.title}>
-            <div className="space-y-3 mb-3">
-              {column.items.map((item) => (
-                <BoardItem
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  priority={item.priority}
-                />
-              ))}
-            </div>
-            <CreateItemForm
-              columnId={column.id}
-              createItemHandler={createItemHandler}
-            />
-          </BoardColumn>
-        ))}
-        <DragOverlay>
-          {activeItem ? (
-            <BoardItem
-              id={activeItem.id}
-              title={activeItem.title}
-              priority={activeItem.priority}
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+    <div className="min-h-screen flex flex-col bg-linear-to-b from-slate-800 to-slate-900 p-6 shadow-lg gap-6">
+      <div className="flex gap-6 items-center h-fit">
+        <h1 className="text-2xl font-bold text-white">{board.name}</h1>
+        <CreateColumnForm boardId={boardId} opened={opened} close={close} />
+        <Button variant="outline" radius="md" onClick={open}>
+          + New Column
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          {board?.columns.map((column) => (
+            <BoardColumn key={column.id} id={column.id} title={column.title}>
+              <div className="space-y-3 mb-3">
+                {column?.items.map((item) => (
+                  <BoardItem
+                    key={item.id}
+                    id={item.id}
+                    title={item.title}
+                    priority={item.priority as 'low' | 'medium' | 'high'}
+                  />
+                ))}
+              </div>
+              <CreateItemForm boardId={boardId} columnId={column?.id} />
+            </BoardColumn>
+          ))}
+          <DragOverlay>
+            {activeItem ? (
+              <BoardItem
+                id={activeItem.id}
+                title={activeItem.title}
+                priority={activeItem.priority as 'low' | 'medium' | 'high'}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
     </div>
   );
 };
 
 export default Board;
+
+type CreateColumnFormProps = {
+  boardId: number;
+  opened: boolean;
+  close: () => void;
+};
+
+function CreateColumnForm({ boardId, opened, close }: CreateColumnFormProps) {
+  const [name, setName] = useState('');
+  const { mutate: createColumn, isPending } = useCreateBoardColumn();
+
+  const submitHandler = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!name) return;
+    createColumn({ boardId, title: name });
+    close();
+  };
+
+  return (
+    <Modal opened={opened} onClose={close} title="Create new column" centered>
+      <form className="space-y-4" onSubmit={submitHandler}>
+        <TextInput
+          label="Column name"
+          placeholder="Enter column name"
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            variant="filled"
+            radius="md"
+            disabled={!name}
+            loading={isPending}
+          >
+            Create column
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function BoardNotFound() {
+  return (
+    <div className="min-h-screen flex flex-col bg-linear-to-b from-slate-800 to-slate-900 p-6 shadow-lg gap-6">
+      <div className="flex gap-6 items-center h-fit">
+        <h1 className="text-2xl font-bold text-white">Board not found</h1>
+      </div>
+    </div>
+  );
+}

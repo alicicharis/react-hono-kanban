@@ -1,14 +1,14 @@
 import { InsertBoardItem } from '../db/schema.js';
-import { boardItemRepository } from '../repositories/board-items.repository.js';
+import { boardItemsRepository } from '../repositories/board-items.repository.js';
 
-export const boardItemService = {
+export const boardItemsService = {
   getById: async (id: number) => {
-    return boardItemRepository.getById(id);
+    return boardItemsRepository.getById(id);
   },
   getAll: async () => {
-    return boardItemRepository.getAll();
+    return boardItemsRepository.getAll();
   },
   create: async (payload: InsertBoardItem) => {
-    return boardItemRepository.create(payload);
+    return boardItemsRepository.create(payload);
   },
 };

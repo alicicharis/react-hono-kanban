@@ -3,7 +3,7 @@ import { boardItems, InsertBoardItem } from '../db/schema.js';
 import { desc } from 'drizzle-orm';
 import { eq } from 'drizzle-orm';
 
-export const boardItemRepository = {
+export const boardItemsRepository = {
   getById: async (id: number) => {
     return db.select().from(boardItems).where(eq(boardItems.id, id)).limit(1);
   },

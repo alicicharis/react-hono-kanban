@@ -2,7 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { useMemo } from 'react';
 
 type BoardItemProps = {
-  id: string;
+  id: number;
   title: string;
   priority: 'low' | 'medium' | 'high';
 };

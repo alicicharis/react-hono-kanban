@@ -24,8 +24,11 @@ export const columns = pgTable('columns', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const insertBoardColumnSchema = createInsertSchema(columns);
+export const selectBoardColumnSchema = createSelectSchema(columns);
+
 export type SelectColumn = typeof columns.$inferSelect;
-export type InsertColumn = typeof columns.$inferInsert;
+export type InsertBoardColumn = typeof columns.$inferInsert;
 
 export const boardItems = pgTable('board_items', {
   id: serial('id').primaryKey(),
